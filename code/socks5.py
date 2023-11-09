@@ -12,9 +12,17 @@ class SocksProxy:
         self.client_count = 0
         print(f"Listening on {host}:{port}")
 
+    def get_methods(self, nmethods, client):
+        methods = []
+        if nmethods > 0:
+            methods_data = client.recv(nmethods)
+            methods = list(methods_data)
+        return methods
+
     # Socks5 client and server handshake.
     # Return remote socket which the client wants to connect.
     def handshake(self, client):
+        buff = None
         try:
             # First, negotiate authetication method
             # 1st Request structure:
@@ -23,27 +31,34 @@ class SocksProxy:
             # +----+----------+----------+
             # | 1  |    1     | 1 to 255 |
             # +----+----------+----------+
-            version, nmethods, methods = struct.unpack('!BBB', client.recv(3))
+            # version, nmethods, methods = struct.unpack('!BBB', client.recv(3))
+            version, nmethods = struct.unpack('!BB', client.recv(2))
+            methods = self.get_methods(nmethods, client)
             # Reply there is no authentication required
             client.sendall(struct.pack('!BB', 0x05, 0x00))  
 
-            # Then, tells remote address and port
+            # Then, client tells remote address and port
             # 2nd Request structure:
             # +----+-----+-------+------+----------+----------+
             # |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
             # +----+-----+-------+------+----------+----------+
             # | 1  |  1  | X'00' |  1   | Variable |    2     |
             # +----+-----+-------+------+----------+----------+
-            version, cmd, _, address_type = struct.unpack('!BBBB', client_socket.recv(4))
+            buff = client.recv(4)
+            version, cmd, _, address_type = struct.unpack('!BBBB', buff)
             if address_type == 1:  # IPv4
-                remote_address = socket.inet_ntoa(client.recv(4))
+                buff = client.recv(4)
+                remote_address = socket.inet_ntoa(buff)
             elif address_type == 3:  # Domain name
-                domain_length = client.recv(1)[0]
-                remote_address = client.recv(domain_length)
+                buff = client.recv(1)
+                domain_length = buff[0]
+                buff = client.recv(domain_length)
+                remote_address = buff
             else:
                 print("Unsupported address_type:", address_type)
                 return None
-            remote_port = struct.unpack('!H', client.recv(2))[0]
+            buff = client.recv(2)
+            remote_port = struct.unpack('!H', buff)[0]
 
             # Connect to remote
             if remote_address and remote_port:
@@ -66,7 +81,7 @@ class SocksProxy:
 
             return remote
         except Exception as e:
-            print("Error with client_socket:", client_socket.getpeername())
+            print("Error with client:", client.getpeername(), "last request:", buff)
             print(e.args)
             if 'remote_address' in locals() and 'remote_port' in locals():
                 print("Remote address:", remote_port, "remote_port:", port)
