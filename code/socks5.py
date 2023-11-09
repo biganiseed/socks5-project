@@ -54,6 +54,9 @@ class SocksProxy:
                 domain_length = buff[0]
                 buff = client.recv(domain_length)
                 remote_address = buff
+            elif address_type == 4:  # IPv6
+                print("IPv6 is unsupported yet.")
+                return None
             else:
                 print("Unsupported address_type:", address_type)
                 return None
