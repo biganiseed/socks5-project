@@ -1,0 +1,6 @@
+# Set local socks5 proxy on/off
+# Usage: local on
+# Usage: local off
+
+networksetup -setsocksfirewallproxy Wi-Fi localhost 10800 off
+networksetup -setsocksfirewallproxystate Wi-Fi $1
