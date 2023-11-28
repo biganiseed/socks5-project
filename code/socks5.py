@@ -4,11 +4,10 @@ import struct
 import select
 
 class SocksProxy:
-    def __init__(self, host='0.0.0.0', port=10800):
+    def __init__(self, host='0.0.0.0', port=10801):
         self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1) # Enable port reuse when the port is not released by last process yet.
         self.server.bind((host, port))
-        self.server.listen(5)
+        self.server.listen(5) # Maximum 5 queued connections.
         self.client_count = 0
         print(f"Listening on {host}:{port}")
 
@@ -24,21 +23,25 @@ class SocksProxy:
     def handshake(self, client):
         buff = None
         try:
-            # First, negotiate authetication method
+            # Negotiate authetication method
             # 1st Request structure:
             # +----+----------+----------+
             # |VER | NMETHODS | METHODS  |
             # +----+----------+----------+
             # | 1  |    1     | 1 to 255 |
             # +----+----------+----------+
-            # version, nmethods, methods = struct.unpack('!BBB', client.recv(3))
             version, nmethods = struct.unpack('!BB', client.recv(2))
             methods = self.get_methods(nmethods, client)
-            # Reply there is no authentication required
+            # Reply that there is no authentication required with 0x00 in METHOD.
+            # +----+--------+
+            # |VER | METHOD |
+            # +----+--------+
+            # | 1  |   1    |
+            # +----+--------+            
             client.sendall(struct.pack('!BB', 0x05, 0x00))  
 
-            # Then, client tells remote address and port
-            # 2nd Request structure:
+            # Client tells the address and port it wants to access
+            # 2nd Request MSG structure:
             # +----+-----+-------+------+----------+----------+
             # |VER | CMD |  RSV  | ATYP | DST.ADDR | DST.PORT |
             # +----+-----+-------+------+----------+----------+
@@ -70,8 +73,8 @@ class SocksProxy:
                 bind_address = remote.getsockname()
                 print(f"Connected to {remote_address}:{remote_port}")
 
-            # Reply success to client
-            # Reply structure:
+            # Reply success to client with 0x00 in REP
+            # Reply MSG structure:
             # +----+-----+-------+------+----------+----------+
             # |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
             # +----+-----+-------+------+----------+----------+
@@ -87,7 +90,7 @@ class SocksProxy:
             print("Error with client:", client.getpeername(), "last request:", buff)
             print(e.args)
             if 'remote_address' in locals() and 'remote_port' in locals():
-                print("Remote address:", remote_port, "remote_port:", port)
+                print("Remote address:", remote_address, "remote_port:", remote_port)
             return None
 
     def proxy_client(self, client):
@@ -117,7 +120,7 @@ class SocksProxy:
 
     def run(self):
         socket.setdefaulttimeout(5)
-        print("Starting SOCKS5 server")
+        print("Waiting for client request...")
         while True:
             client, address = self.server.accept()
             self.client_count += 1
@@ -126,5 +129,6 @@ class SocksProxy:
             proxy.start()
 
 if __name__ == '__main__':
+    print("Starting SOCKS5 server")
     proxy = SocksProxy()
     proxy.run()

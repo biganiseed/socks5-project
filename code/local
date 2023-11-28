@@ -2,5 +2,5 @@
 # Usage: local on
 # Usage: local off
 
-networksetup -setsocksfirewallproxy Wi-Fi localhost 10800 off
+networksetup -setsocksfirewallproxy Wi-Fi localhost 10801 off
 networksetup -setsocksfirewallproxystate Wi-Fi $1

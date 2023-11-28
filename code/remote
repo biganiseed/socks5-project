@@ -2,5 +2,5 @@
 # Usage: remote on
 # Usage: remote off
 
-networksetup -setsocksfirewallproxy Wi-Fi shanghai.route.place 10800 off
+networksetup -setsocksfirewallproxy Wi-Fi shanghai.route.place 10801 off
 networksetup -setsocksfirewallproxystate Wi-Fi $1

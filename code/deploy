@@ -1,4 +1,4 @@
 # Deploy program to shanghai.route.place
 # Password is "nyit"
 
-scp socks5.py root@shanghai.route.place:/root/690/
+scp socks5.py root@shanghai.route.place:/root/
